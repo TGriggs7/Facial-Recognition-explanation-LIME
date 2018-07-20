@@ -1,3 +1,4 @@
+import sys
 import pandas as pd
 from PIL import Image
 from fr_utils import *
@@ -54,6 +55,17 @@ def img_path_to_encoding(image_path, model):
     return img_to_encoding(cv2.imread(image_path, 1), model)
 
 
+# given path to dir with images, fills 'database' with images
+def fillDatabase(databasePath, database):
+    databasePath = os.fsencode(databasePath)
+    if not os.path.exists(databasePath):
+        sys.exit('Invalid database path')
+        
+    for img in os.listdir(databasePath):
+        img_path = os.path.join(databasePath, os.fsencode(img))
+        database[img.decode('UTF-8')] = img_path_to_encoding(os.fsdecode(img_path), FRmodel)
+        
+
 # given list of images, gets probability of each image being 'Greg'
 def get_probability(imgs):
     dists = []
@@ -62,7 +74,7 @@ def get_probability(imgs):
         encoding = img_to_encoding(imgs[i], FRmodel)
         
         # calculates distance from 'Greg'
-        dist = np.linalg.norm(encoding-database["Greg"])
+        dist = np.linalg.norm(encoding-database["greg_anchor.jpg"])
         
         # [prob of being Greg, prob of being not Greg]
         dists.append([1-dist, dist])
@@ -98,10 +110,9 @@ FRmodel.compile(optimizer = 'adam', loss = triplet_loss, metrics = ['accuracy'])
 load_weights_from_FaceNet(FRmodel)
 
 
-# Fill database here with image encodings
+# fill database
 database = {}
-database['Greg'] = img_path_to_encoding("images/greg_positive.jpg", FRmodel)
-database['Maxim'] = img_path_to_encoding("images/maxim_positive.jpg", FRmodel)
+fillDatabase('images', database)
 
 
 # init LIME explainer and segmentation function
@@ -112,8 +123,3 @@ segmenter = SegmentationAlgorithm('slic', n_segments=50, compactness=1, sigma=1)
 # see explanations
 get_explanation("images/greg_positive.jpg")
 get_explanation("images/maxim_positive.jpg")
-
-
-
-
-
